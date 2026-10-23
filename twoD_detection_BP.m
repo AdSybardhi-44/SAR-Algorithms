@@ -157,9 +157,6 @@ imagesc(20.*log10(abs(s_ed)'./max(abs(s_ed),[],"all")))
 view(2)
 title("Magnitude")
 
-z = range_baseband_0(1:Nr);
-x = abs(s_ed)'./max(abs(s_ed),[],"all")
-
 
 
 %% TO DO

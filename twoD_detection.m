@@ -246,10 +246,10 @@ azimuth_coord = azimuth_coord';
 
 %%
 figure
-imagesc(20.*log10(abs(s_ac)'./max(abs(s_ac),[],"all")))
+surf(20.*log10(abs(s_ac)'./max(abs(s_ac),[],"all")))
 hold on
 plot3(range_coord(peaks_tf),azimuth_coord(peaks_tf),abs(s_ac(peaks_tf)),"red.",MarkerSize=12)
-view(2)
+% view(2)
 title("Magnitude")
 
 %% SRC Option 2
