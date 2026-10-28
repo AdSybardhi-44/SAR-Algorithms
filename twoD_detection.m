@@ -12,7 +12,7 @@ F_r         = 60e6;     % Hz
 F_a         = 100;      % Hz
 N_az        = 256;
 N_rg        = 320;
-theta_r_c   = 0;      % deg , beam squint angle
+theta_r_c   = 3.5;      % deg , beam squint angle
 eta_c       = -8.1;     % s , beam center crossing time
 f_eta_c        = 320;      % Hz , doppler centroid freq, fixed at 2V_rsin(theta_r_c)/lambda for all ranges
 % theta_r_c = 21.9; eta_c = -49.7; f_nc = 1975;
@@ -34,8 +34,8 @@ x_centered = eta_centered*V_r;
 [ETA, TAU] = meshgrid(eta_centered,tau_centered);
 echoScene = zeros(size(TAU));
 %% Chirp definition (received)
-target_rg_idx = [155 155 200];
-target_az_idx = [85 105 105];   % A earlier than B and C; tune until the knot is near 175
+target_rg_idx = [145 145 160];
+target_az_idx = [90 110 110];   % A earlier than B and C; tune until the knot is near 175
 targets_R   = range_centered(target_rg_idx);
 targets_eta = eta_centered(target_az_idx);   % beam-center crossing times
 
