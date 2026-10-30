@@ -9,7 +9,7 @@ B = T*K;
 alpha_sampling = 1.07;
 fs = B*alpha_sampling;
 % fs = 18.5e6;
-T = T_samples/fs;
+% T = T_samples/fs;
 c  = 3e8;
 
 scene_samples = 2048;

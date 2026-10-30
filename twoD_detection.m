@@ -50,7 +50,7 @@ for ii = 1:nTargets
     eta_0 = eta_tg - eta_c;                      % zero-Doppler time of this target
 
     K_a = 2*V_r^2*cos(theta_r_c)^2/(lambda*R_tg);
-    w_a = sinc(0.886.*K_a.*(ETA - eta_tg)./delta_f_dop).^2;
+    w_a = sinc(0.886.*K_a.*(ETA - eta_c)./delta_f_dop).^2;
 
     R_eta = sqrt(R0^2 + V_r^2*(ETA - eta_0).^2);
 
