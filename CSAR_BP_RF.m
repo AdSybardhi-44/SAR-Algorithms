@@ -80,163 +80,163 @@ pos_drone = rad_drone .* exp(1j.*rot_angles);
 % V_tan = pos_drone - circshift(pos_drone,1,2);  %creates problems for Ka
 % V_tan = sum(abs(V_tan(1,:) + 1j*V_tan(2,:)))/N_az;
 %% AI generated reflectivity map
-%% Target reflectivity map: "SAR"
-target_map = zeros(N_x,N_y);
-
-% Binary 7-by-5 letters
-letter_S = [
-    1 1 1 1 1
-    1 0 0 0 0
-    1 0 0 0 0
-    1 1 1 1 1
-    0 0 0 0 1
-    0 0 0 0 1
-    1 1 1 1 1
-];
-
-letter_A = [
-    0 1 1 1 0
-    1 0 0 0 1
-    1 0 0 0 1
-    1 1 1 1 1
-    1 0 0 0 1
-    1 0 0 0 1
-    1 0 0 0 1
-];
-
-letter_R = [
-    1 1 1 1 0
-    1 0 0 0 1
-    1 0 0 0 1
-    1 1 1 1 0
-    1 0 1 0 0
-    1 0 0 1 0
-    1 0 0 0 1
-];
-
-%% Select target-map style
-filled_letters = true;
-
-if filled_letters
-    % Solid strokes composed of adjacent point scatterers
-    scale_x = 4;
-    scale_y = 4;
-
-    S_big = kron(letter_S,ones(scale_x,scale_y));
-    A_big = kron(letter_A,ones(scale_x,scale_y));
-    R_big = kron(letter_R,ones(scale_x,scale_y));
-
-    gap = zeros(size(S_big,1),3*scale_y);
-
-else
-    % Separated point scatterers
-    spacing_x = 4;
-    spacing_y = 4;
-
-    S_big = zeros( ...
-        (size(letter_S,1)-1)*spacing_x + 1, ...
-        (size(letter_S,2)-1)*spacing_y + 1);
-
-    A_big = zeros( ...
-        (size(letter_A,1)-1)*spacing_x + 1, ...
-        (size(letter_A,2)-1)*spacing_y + 1);
-
-    R_big = zeros( ...
-        (size(letter_R,1)-1)*spacing_x + 1, ...
-        (size(letter_R,2)-1)*spacing_y + 1);
-
-    S_big(1:spacing_x:end,1:spacing_y:end) = letter_S;
-    A_big(1:spacing_x:end,1:spacing_y:end) = letter_A;
-    R_big(1:spacing_x:end,1:spacing_y:end) = letter_R;
-
-    gap = zeros(size(S_big,1),2*spacing_y);
-end
-
-SAR_pattern = [S_big, gap, A_big, gap, R_big];
-
-%% Place the pattern at the Cartesian scene center
-pattern_Nx = size(SAR_pattern,1);
-pattern_Ny = size(SAR_pattern,2);
-
-x_start = floor((N_x-pattern_Nx)/2) + 1;
-y_start = floor((N_y-pattern_Ny)/2) + 1;
-
-x_range = x_start:(x_start+pattern_Nx-1);
-y_range = y_start:(y_start+pattern_Ny-1);
-
-target_map(x_range,y_range) = SAR_pattern;
-
-%% Enforce circular CSAR scene support
-target_map(abs(pixels) > scene_rad) = 0;
-
-%% Display the desired scene
-figure
-
-imagesc(x_coords,y_coords,abs(target_map).')
-axis xy equal tight
-colormap(turbo)
-colorbar
-
-xlabel('x [m]')
-ylabel('y [m]')
-title('Desired CSAR reflectivity map')
-
-%% Convert reflectivity map into point-target list
-[x_tg_idx,y_tg_idx] = find(abs(target_map) > 0);
-
-target_linear_idx = sub2ind( ...
-    [N_x,N_y], ...
-    x_tg_idx, ...
-    y_tg_idx);
-
-target_amplitudes = target_map(target_linear_idx);
-
-nTargets = numel(target_amplitudes);
-
-targets = complex(zeros(2,nTargets));
-
-fprintf('Number of CSAR point targets: %d\n',nTargets);
-
-%% Chirp definition and echo generation
-echoScene_BP_no_noise = complex(zeros(N_rg,N_az));
-
-for tt = 1:nTargets
-
-    ix = x_tg_idx(tt);
-    iy = y_tg_idx(tt);
-
-    pos_tg = pixels(ix,iy);
-    A0 = target_amplitudes(tt);
-
-    % Store physical location and map index
-    targets(1,tt) = pos_tg;
-    targets(2,tt) = ix + 1j*iy;
-
-    % Complete circular range history
-    rel_tg = pos_tg - pos_drone;
-    R_tg = abs(rel_tg);
-
-    for ii = 1:N_az
-
-        R_eta = R_tg(ii);
-        tau_tg = dist2time(R_eta);
-
-        % Range-envelope support
-        w_r_shifted = ...
-            abs(tau_centered - tau_tg) <= T_r/2;
-
-        % CSAR raw echo
-        echo = ...
-            A0 .* ...
-            w_r_shifted.' .* ...
-            exp(-1j*4*pi*f0*R_eta/c) .* ...
-            exp(1j*pi*K_r* ...
-            (tau_centered.'-tau_tg).^2);
-
-        echoScene_BP_no_noise(:,ii) = ...
-            echoScene_BP_no_noise(:,ii) + echo;
-    end
-end
+% %% Target reflectivity map: "SAR"
+% target_map = zeros(N_x,N_y);
+% 
+% % Binary 7-by-5 letters
+% letter_S = [
+%     1 1 1 1 1
+%     1 0 0 0 0
+%     1 0 0 0 0
+%     1 1 1 1 1
+%     0 0 0 0 1
+%     0 0 0 0 1
+%     1 1 1 1 1
+% ];
+% 
+% letter_A = [
+%     0 1 1 1 0
+%     1 0 0 0 1
+%     1 0 0 0 1
+%     1 1 1 1 1
+%     1 0 0 0 1
+%     1 0 0 0 1
+%     1 0 0 0 1
+% ];
+% 
+% letter_R = [
+%     1 1 1 1 0
+%     1 0 0 0 1
+%     1 0 0 0 1
+%     1 1 1 1 0
+%     1 0 1 0 0
+%     1 0 0 1 0
+%     1 0 0 0 1
+% ];
+% 
+% %% Select target-map style
+% filled_letters = true;
+% 
+% if filled_letters
+%     % Solid strokes composed of adjacent point scatterers
+%     scale_x = 4;
+%     scale_y = 4;
+% 
+%     S_big = kron(letter_S,ones(scale_x,scale_y));
+%     A_big = kron(letter_A,ones(scale_x,scale_y));
+%     R_big = kron(letter_R,ones(scale_x,scale_y));
+% 
+%     gap = zeros(size(S_big,1),3*scale_y);
+% 
+% else
+%     % Separated point scatterers
+%     spacing_x = 4;
+%     spacing_y = 4;
+% 
+%     S_big = zeros( ...
+%         (size(letter_S,1)-1)*spacing_x + 1, ...
+%         (size(letter_S,2)-1)*spacing_y + 1);
+% 
+%     A_big = zeros( ...
+%         (size(letter_A,1)-1)*spacing_x + 1, ...
+%         (size(letter_A,2)-1)*spacing_y + 1);
+% 
+%     R_big = zeros( ...
+%         (size(letter_R,1)-1)*spacing_x + 1, ...
+%         (size(letter_R,2)-1)*spacing_y + 1);
+% 
+%     S_big(1:spacing_x:end,1:spacing_y:end) = letter_S;
+%     A_big(1:spacing_x:end,1:spacing_y:end) = letter_A;
+%     R_big(1:spacing_x:end,1:spacing_y:end) = letter_R;
+% 
+%     gap = zeros(size(S_big,1),2*spacing_y);
+% end
+% 
+% SAR_pattern = [S_big, gap, A_big, gap, R_big];
+% 
+% %% Place the pattern at the Cartesian scene center
+% pattern_Nx = size(SAR_pattern,1);
+% pattern_Ny = size(SAR_pattern,2);
+% 
+% x_start = floor((N_x-pattern_Nx)/2) + 1;
+% y_start = floor((N_y-pattern_Ny)/2) + 1;
+% 
+% x_range = x_start:(x_start+pattern_Nx-1);
+% y_range = y_start:(y_start+pattern_Ny-1);
+% 
+% target_map(x_range,y_range) = SAR_pattern;
+% 
+% %% Enforce circular CSAR scene support
+% target_map(abs(pixels) > scene_rad) = 0;
+% 
+% %% Display the desired scene
+% figure
+% 
+% imagesc(x_coords,y_coords,abs(target_map).')
+% axis xy equal tight
+% colormap(turbo)
+% colorbar
+% 
+% xlabel('x [m]')
+% ylabel('y [m]')
+% title('Desired CSAR reflectivity map')
+% 
+% %% Convert reflectivity map into point-target list
+% [x_tg_idx,y_tg_idx] = find(abs(target_map) > 0);
+% 
+% target_linear_idx = sub2ind( ...
+%     [N_x,N_y], ...
+%     x_tg_idx, ...
+%     y_tg_idx);
+% 
+% target_amplitudes = target_map(target_linear_idx);
+% 
+% nTargets = numel(target_amplitudes);
+% 
+% targets = complex(zeros(2,nTargets));
+% 
+% fprintf('Number of CSAR point targets: %d\n',nTargets);
+% 
+% %% Chirp definition and echo generation
+% echoScene_BP_no_noise = complex(zeros(N_rg,N_az));
+% 
+% for tt = 1:nTargets
+% 
+%     ix = x_tg_idx(tt);
+%     iy = y_tg_idx(tt);
+% 
+%     pos_tg = pixels(ix,iy);
+%     A0 = target_amplitudes(tt);
+% 
+%     % Store physical location and map index
+%     targets(1,tt) = pos_tg;
+%     targets(2,tt) = ix + 1j*iy;
+% 
+%     % Complete circular range history
+%     rel_tg = pos_tg - pos_drone;
+%     R_tg = abs(rel_tg);
+% 
+%     for ii = 1:N_az
+% 
+%         R_eta = R_tg(ii);
+%         tau_tg = dist2time(R_eta);
+% 
+%         % Range-envelope support
+%         w_r_shifted = ...
+%             abs(tau_centered - tau_tg) <= T_r/2;
+% 
+%         % CSAR raw echo
+%         echo = ...
+%             A0 .* ...
+%             w_r_shifted.' .* ...
+%             exp(-1j*4*pi*f0*R_eta/c) .* ...
+%             exp(1j*pi*K_r* ...
+%             (tau_centered.'-tau_tg).^2);
+% 
+%         echoScene_BP_no_noise(:,ii) = ...
+%             echoScene_BP_no_noise(:,ii) + echo;
+%     end
+% end
 
 %% Chirp Definition (Rx)
 
@@ -258,30 +258,30 @@ for tt = 1:nTargets
     rel_sc = - pos_drone;
 
     R_tg = abs(rel_tg);
-    
+
     [mag ,closest_idx] = min(R_tg);
-    
-        
-    % theta_tg = atan2(imag(rel_tg),real(rel_tg));
-    % theta_sc = atan2(imag(rel_sc),real(rel_sc));
-    % 
-    % delta_theta = theta_tg - theta_sc;
-    % 
-    % w_a = sinc((La/lambda)*delta_theta).^2;
-    
-    
+
+
+    theta_tg = atan2(imag(rel_tg),real(rel_tg));
+    theta_sc = atan2(imag(rel_sc),real(rel_sc));
+
+    delta_theta = sin(theta_tg) - sin(theta_sc);
+
+    w_a = sinc((La/lambda)*delta_theta).^2;
+
+
     A0 = 1;
-    
+
     for ii = 1:length(eta_centered) %captures
-        % w_a_ii = w_a(ii);
-        w_a_ii = 1;
+        w_a_ii = w_a(ii);
+        % w_a_ii = 1;
 
         eta = eta_centered(ii);
-    
+
         R_eta = R_tg(ii);
-        
+
         w_r_shifted = abs(tau_centered - dist2time(R_eta)) <= T_r/2;
-    
+
         echo = A0 .* w_r_shifted' .* w_a_ii ...
             .* exp(-1j.*4.*pi.*f0.*R_eta./c) ...
             .* exp(1j.*pi.*K_r.*(tau_centered' - dist2time(R_eta)).^2);
@@ -290,7 +290,7 @@ for tt = 1:nTargets
     end
 end
 %% Simulations
-for ramp_threshold = [0.5]
+for ramp_threshold = [1]
     for SNR = [Inf]
         sigma_n = sqrt(0.45*10^(-SNR/10)); % avg power was around 0.45, we test using SNR
         add_noise = sigma_n*(randn(N_rg,N_az) + 1j.*randn(N_rg,N_az))/sqrt(2);
@@ -365,25 +365,36 @@ for ramp_threshold = [0.5]
                     % delta_theta = theta_pixel - theta_r_c;
                     % 
                     % w_bp = sinc((La/lambda)*delta_theta).^2;
-    
+
                     N_INTERP = (R_pixel - range_centered(1))/bin_delta_R +1;
                     N_SAM = n_rg';
                     INTERP_MATRIX_VALUES = N_INTERP - N_SAM;
-                    interp_neighbors = 16;
+                    interp_neighbors = 4;
                     mask_interp = abs(INTERP_MATRIX_VALUES)<=interp_neighbors/2;
                     INTERP_KERNEL = zeros(size(INTERP_MATRIX_VALUES));
                     INTERP_KERNEL(mask_interp) = sinc(INTERP_MATRIX_VALUES(mask_interp));
                     echoScene2Pixel = sum(sum(INTERP_KERNEL.*(s_rc_sharp),1).*exp(1j.*4.*pi.*f0.*R_pixel./c));
                     % echoScene2Pixel = sum(sum(sinc(N_INTERP - N_SAM).*(s_rc),1).*exp(1j.*4.*pi.*f0.*R_pixel./c));
-    
+
                     grid_mag(xx,yy) = echoScene2Pixel;
                 end
             end
 
-
+            % theta_max = asin(scene_rad / rad_drone);
+            % 
+            % theta_angles = linspace(theta_max, -theta_max, 1000);
+            % 
+            % grid_mag = zeros(N_x,N_y);
+            % 
+            % oversampling = 4;
+            % n_sam = (n_rg)-1;
+            % n_interp = (1-(2/oversampling)):1/oversampling:(Nr + (2/oversampling));
+            % 
+            % ranges = (min(range_centered_0)-(2*bin_delta_R/oversampling)):bin_delta_R/oversampling:(max(range_centered_0)+(2*bin_delta_R/oversampling));
+            % [N_INTERP,N_SAM] = ndgrid(n_interp,n_sam);
             % for nn = 1:N_az  %% My method, bit innacurate
             %     if ff == 1
-            %         range_compressed_samples = ifft(fft(abs(s_rc(:,nn))).*ramp_filter);
+            %         range_compressed_samples = abs(ifft(fft(abs(s_rc(:,nn))).*ramp_filter));
             %     else
             %         range_compressed_samples = abs(s_rc(:,nn));
             %     end
