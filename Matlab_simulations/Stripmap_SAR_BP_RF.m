@@ -83,81 +83,81 @@ y_coords = range_centered_0; %approximately since distance from center much larg
 pixels = X+1j.*Y;
 
 %% Load arbitrary grayscale reflectivity map 
-img = imread('durres_scene.png');
-
-% Convert RGB -> grayscale if necessary
-if ndims(img) == 3
-    img = rgb2gray(img);
-end
-
-img = double(img);
-
-% Normalize reflectivities to [0,1]
-img = img ./ max(img(:));
-
-% Optional threshold to remove weak pixels
-threshold = 0.05;
-img(img < threshold) = 0;
-
-% Resize to SAR grid dimensions
-target_map = imresize(img',[N_x N_y],'bilinear');
-
-[x_tg_idx, y_tg_idx] = find(target_map ~= 0);
-
-target_amplitude = target_map( ...
-    sub2ind(size(target_map), x_tg_idx, y_tg_idx));
-
-nTargets = numel(x_tg_idx);
-
-fprintf('Number of point targets: %d\n', nTargets);
-
-
-%% Echo generation from reflectivity map
-echoScene_BP_no_noise = complex(zeros(N_rg,N_az));
-
-targets = complex(zeros(2,nTargets));
-
-for tt = 1:nTargets
-
-    ix = x_tg_idx(tt);
-    iy = y_tg_idx(tt);
-
-    pos_tg = pixels(ix,iy);
-    A0 = target_amplitude(tt);
-
-    % Store physical position and pixel index
-    targets(1,tt) = pos_tg;
-    targets(2,tt) = ix + 1j*iy;
-
-    % Target-platform geometry over slow time
-    rel_tg = pos_tg - pos_drone;
-
-    R_tg = abs(rel_tg);
-
-    dx = real(rel_tg);
-    dy = imag(rel_tg);
-
-    theta_tg = atan2(dx,dy);
-
-    % More accurate direction-cosine antenna argument
-    delta_u = sin(theta_tg) - sin(theta_r_c);
-
-    w_a = sinc((La/lambda)*delta_u).^2;
-
-    tau_delay = dist2time(R_tg);
-
-    dtau = tau_centered' - tau_delay;
-
-    w_r_shifted = ...
-        abs(dtau) <= (T_r/2);
-
-    echo = ...
-        (A0.*w_a.*exp(-1j*4*pi*f0*R_tg/c)) .* ...
-        (w_r_shifted.*exp(1j*pi*K_r* dtau.^2));
-
-    echoScene_BP_no_noise = ...
-        echoScene_BP_no_noise + echo;
-end
+% img = imread('durres_scene.png');
+% 
+% % Convert RGB -> grayscale if necessary
+% if ndims(img) == 3
+%     img = rgb2gray(img);
+% end
+% 
+% img = double(img);
+% 
+% % Normalize reflectivities to [0,1]
+% img = img ./ max(img(:));
+% 
+% % Optional threshold to remove weak pixels
+% threshold = 0.05;
+% img(img < threshold) = 0;
+% 
+% % Resize to SAR grid dimensions
+% target_map = imresize(img',[N_x N_y],'bilinear');
+% 
+% [x_tg_idx, y_tg_idx] = find(target_map ~= 0);
+% 
+% target_amplitude = target_map( ...
+%     sub2ind(size(target_map), x_tg_idx, y_tg_idx));
+% 
+% nTargets = numel(x_tg_idx);
+% 
+% fprintf('Number of point targets: %d\n', nTargets);
+% 
+% 
+% %% Echo generation from reflectivity map
+% echoScene_BP_no_noise = complex(zeros(N_rg,N_az));
+% 
+% targets = complex(zeros(2,nTargets));
+% 
+% for tt = 1:nTargets
+% 
+%     ix = x_tg_idx(tt);
+%     iy = y_tg_idx(tt);
+% 
+%     pos_tg = pixels(ix,iy);
+%     A0 = target_amplitude(tt);
+% 
+%     % Store physical position and pixel index
+%     targets(1,tt) = pos_tg;
+%     targets(2,tt) = ix + 1j*iy;
+% 
+%     % Target-platform geometry over slow time
+%     rel_tg = pos_tg - pos_drone;
+% 
+%     R_tg = abs(rel_tg);
+% 
+%     dx = real(rel_tg);
+%     dy = imag(rel_tg);
+% 
+%     theta_tg = atan2(dx,dy);
+% 
+%     % More accurate direction-cosine antenna argument
+%     delta_u = sin(theta_tg) - sin(theta_r_c);
+% 
+%     w_a = sinc((La/lambda)*delta_u).^2;
+% 
+%     tau_delay = dist2time(R_tg);
+% 
+%     dtau = tau_centered' - tau_delay;
+% 
+%     w_r_shifted = ...
+%         abs(dtau) <= (T_r/2);
+% 
+%     echo = ...
+%         (A0.*w_a.*exp(-1j*4*pi*f0*R_tg/c)) .* ...
+%         (w_r_shifted.*exp(1j*pi*K_r* dtau.^2));
+% 
+%     echoScene_BP_no_noise = ...
+%         echoScene_BP_no_noise + echo;
+% end
 
 % %% SAR Letters
 %% Target reflectivity map
@@ -285,51 +285,51 @@ end
 %     end
 % end
 
-% %% Chirp Definition (Rx) (random)
-% 
-% echoScene_BP_no_noise = zeros(N_rg,N_az);
-% nTargets = 50;
-% targets = zeros(2,nTargets);
-% for tt = 1:nTargets
-%     x_tg_idx = randi([1, N_x]);
-%     y_tg_idx = randi([1, N_y]);
-%     pos_tg = pixels(x_tg_idx,y_tg_idx); %maybe some pixels don't appear but that's ok
-% 
-%     targets(1,tt) = pos_tg;
-%     targets(2,tt) = x_tg_idx+ 1j*y_tg_idx;
-% 
-%     rel_tg = pos_tg - pos_drone;
-% 
-%     R_tg = abs(rel_tg);
-%     dx = real(rel_tg);
-%     dy = imag(rel_tg);
-% 
-%     theta_tg = atan2(dx,dy);
-% 
-%     delta_theta = sin(theta_tg) - sin(theta_r_c);
-% 
-%     w_a = sinc((La/lambda)*delta_theta).^2;
-% 
-%     A0 = 1;
-%     for ii = 1:length(eta_centered) %captures
-% 
-%         R_eta = R_tg(ii);
-% 
-%         w_r_shifted = abs(tau_centered - dist2time(R_eta)) <= T_r/2;
-% 
-%         echo = A0 .* w_r_shifted' .* w_a(ii) ...
-%             .* exp(-1j.*4.*pi.*f0.*R_eta./c) ...
-%             .* exp(1j.*pi.*K_r.*(tau_centered' - dist2time(R_eta)).^2);
-% 
-%         echoScene_BP_no_noise(:,ii) = echoScene_BP_no_noise(:,ii) + echo;
-%     end
-% end
-% 
-% %% Random Targets Map
-% target_map = zeros(size(pixels));
-% for tt = 1:nTargets
-%     target_map(real(targets(2,tt)), imag(targets(2,tt))) = 1;
-% end
+%% Chirp Definition (Rx) (random)
+
+echoScene_BP_no_noise = zeros(N_rg,N_az);
+nTargets = 50;
+targets = zeros(2,nTargets);
+for tt = 1:nTargets
+    x_tg_idx = randi([1, N_x]);
+    y_tg_idx = randi([1, N_y]);
+    pos_tg = pixels(x_tg_idx,y_tg_idx); %maybe some pixels don't appear but that's ok
+
+    targets(1,tt) = pos_tg;
+    targets(2,tt) = x_tg_idx+ 1j*y_tg_idx;
+
+    rel_tg = pos_tg - pos_drone;
+
+    R_tg = abs(rel_tg);
+    dx = real(rel_tg);
+    dy = imag(rel_tg);
+
+    theta_tg = atan2(dx,dy);
+
+    delta_theta = sin(theta_tg) - sin(theta_r_c);
+
+    w_a = sinc((La/lambda)*delta_theta).^2;
+
+    A0 = 1;
+    for ii = 1:length(eta_centered) %captures
+
+        R_eta = R_tg(ii);
+
+        w_r_shifted = abs(tau_centered - dist2time(R_eta)) <= T_r/2;
+
+        echo = A0 .* w_r_shifted' .* w_a(ii) ...
+            .* exp(-1j.*4.*pi.*f0.*R_eta./c) ...
+            .* exp(1j.*pi.*K_r.*(tau_centered' - dist2time(R_eta)).^2);
+
+        echoScene_BP_no_noise(:,ii) = echoScene_BP_no_noise(:,ii) + echo;
+    end
+end
+
+%% Random Targets Map
+target_map = zeros(size(pixels));
+for tt = 1:nTargets
+    target_map(real(targets(2,tt)), imag(targets(2,tt))) = 1;
+end
 
 %% 
 figure
