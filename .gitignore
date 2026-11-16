@@ -1,2 +1,10 @@
 Results/ 
 *.asv
+examples/
+.vscode/
+.venv/
+__pycache__/
+koit.m
+koit.py
+*.json
+*dud.py

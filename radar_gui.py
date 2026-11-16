@@ -628,7 +628,7 @@ class RangeProcessor:
             -> high-pass filter with filtfilt (optional)
             -> Kaiser window
             -> FFT
-            -> coherent average over the sweeps of a frame
+            -> coherent average over the sweeps of a frame (if there are multiple sweeps)
 
     With a beamformer, the preprocessed traces are also combined into
     one beamformed range profile.
