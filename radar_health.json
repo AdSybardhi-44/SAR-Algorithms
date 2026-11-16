@@ -1,0 +1,196 @@
+{
+    "requested_parameters": {
+        "F_START": 126000000000.0,
+        "F_STOP": 182000000000.0,
+        "SWEEP_TIME": 0.001,
+        "SWEEP_PERIOD": 0.002,
+        "SWEEP_COUNT": 1,
+        "TRACES": [
+            0
+        ]
+    },
+    "applied_parameters": {
+        "frequency_start_hz": 126000000000.0,
+        "frequency_stop_hz": 181990665256.977,
+        "sweep_time_s": 0.001,
+        "sweep_period_s": 0.002,
+        "sweep_count": 1,
+        "sweep_points": 5001,
+        "sample_interval_s": 2e-07,
+        "enabled_traces": [
+            0
+        ]
+    },
+    "derived_parameters": {
+        "bandwidth_hz": 55990665256.97699,
+        "center_frequency_hz": 153995332628.4885,
+        "wavelength_m": 0.0019467632744639407,
+        "chirp_slope_hz_per_s": 55990665256976.99,
+        "frequency_step_hz": 11198133.051395398,
+        "range_resolution_m": 0.0026771646364984287,
+        "max_one_sided_range_m": 6.692911591246072,
+        "effective_sample_rate_hz": 5000000.0
+    },
+    "consistency_checks": {
+        "expected_points": 5001,
+        "actual_points": 5001,
+        "timing_consistent": true,
+        "reconstructed_sweep_time_s": 0.001,
+        "frequency_start_match": true,
+        "frequency_stop_match": true,
+        "frequency_tolerance_hz": 560000000.0,
+        "frequency_start_deviation_hz": 0.0,
+        "frequency_stop_deviation_hz": -9334743.023010254,
+        "traces_match": true
+    },
+    "health": {
+        "timestamp_utc": "2026-11-16T08:53:19.253757+00:00",
+        "device_info": {
+            "POWER": {
+                "SOURCE": "USB",
+                "STATE": {
+                    "BE": true,
+                    "FE": true,
+                    "ACC": true,
+                    "EXP": true
+                },
+                "STATUS": {
+                    "BE": "POWERED",
+                    "FE": "POWERED",
+                    "ACC": "POWERED",
+                    "EXP": "POWERED"
+                },
+                "LEVEL": {
+                    "SELECTED": "AUTO",
+                    "DETECTED": "HIGH",
+                    "CURRENT": "HIGH"
+                },
+                "VOLTAGE": {
+                    "BE": 4.856,
+                    "FE": 4.856,
+                    "ACC": 4.864
+                },
+                "CURRENT": {
+                    "BE": 0.216,
+                    "FE": 0.936,
+                    "ACC": 0.18,
+                    "TOTAL": 1.328
+                }
+            },
+            "USB": {
+                "STATE": "SINK",
+                "CURRLEVEL": "HIGH",
+                "ACTIVECABLE": false,
+                "ORIENTATION": "CC2",
+                "CHGDETECT": "SDP",
+                "DATTACHED": true,
+                "DCONFIGURED": true,
+                "DSPEED": "HIGH"
+            },
+            "TEMP": {
+                "CPU": "nan",
+                "BE": 34.0,
+                "POWER": 24.2,
+                "ACB": 35.1,
+                "RF": 30.9,
+                "MMIC": 33.2
+            },
+            "IMU": {
+                "ACCELEROMETER": {
+                    "X": -126,
+                    "Y": -431,
+                    "Z": 15701
+                }
+            },
+            "HWTYPE": {
+                "BE": "SYNCE_USBHS_T1_USB",
+                "EXP": "HWOPT1_RTCO_REFO_EMMC"
+            },
+            "HWREVISION": {
+                "BE": "B",
+                "EXP": "B"
+            },
+            "ID": {
+                "EUI48": "68:27:19:AD:61:B3",
+                "EUI64": "68:27:19:FF:FE:AD:61:B3",
+                "CPU": "10:27:11:D7:59:9E:5B:78",
+                "EXP": "FF:FF:29:41:00:FD",
+                "ACB": "E0:A8:86:14:21:22:98:80",
+                "RF": "00:00:00:00:00:00:00:00",
+                "CRYPTO": "01:23:23:00:9E:07:4B:FA:EE"
+            },
+            "EXPANSION": {
+                "EMMC": {
+                    "STATUS": "INITIALIZED",
+                    "CID": {
+                        "MFRID": 157,
+                        "APPID": 257,
+                        "MFRDATE": 57,
+                        "PRODNAME": "IS008",
+                        "PRODVER": 71,
+                        "PRODSERIAL": 1348750672
+                    },
+                    "CSD": {
+                        "CSDVER": 3,
+                        "SYSVER": 4,
+                        "XFERSPEED": 50,
+                        "RDBLKLEN": 9,
+                        "WRBLKLEN": 9,
+                        "FLAGS": 16,
+                        "DEVSIZE": 4095,
+                        "DEVSIZEM": 7
+                    }
+                }
+            },
+            "RFDI": {
+                "MAGICVALUE": 1686629713,
+                "VERSION": "1.0",
+                "FIRMWARE": {
+                    "BACKUP": false,
+                    "CRC32": {
+                        "EMPTY": 1271507853,
+                        "IMAGE": 533865917,
+                        "CONF0": 533865917,
+                        "CONF1": 533865917
+                    }
+                }
+            },
+            "ROSCILLATOR": {
+                "ENABLED": true,
+                "SOURCE": {
+                    "SELECTED": "INTERNAL",
+                    "CURRENT": "INTERNAL"
+                },
+                "LOCK": true,
+                "HOLDOVER": false,
+                "DCTCXO": {
+                    "AVAILABLE": true,
+                    "ADJUSTMENT": 0.0
+                }
+            }
+        },
+        "main_pll_locked": true,
+        "aux_pll_locked": true,
+        "radar_state": "RadarState.IDLE",
+        "ready_for_acquisition": true
+    },
+    "full_sense_dump": {
+        "FREQUENCY": {
+            "MODE": "SWEEP",
+            "START": 126000000000.0,
+            "STOP": 181990665256.977,
+            "SPAN": 55990665256.9771,
+            "CENTER": 153995332628.489
+        },
+        "SWEEP": {
+            "POINTS": 5001,
+            "TIME": 0.001,
+            "TINTERVAL": 2e-07,
+            "DIRECTION": "UP",
+            "MODE": "NORMAL",
+            "COUNT": 1,
+            "PERIOD": 0.002
+        }
+    },
+    "errors": []
+}

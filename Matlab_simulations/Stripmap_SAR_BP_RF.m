@@ -4,8 +4,6 @@ close all
 clc
 %% Simulating Stripmap SAR
 %% Parameters
-res_rg = 2.7;
-res_az = 1.7;
 R_eta_c     = 20e3;     % m    slant range of scene center
 V_r         = 150;      % m/s
 T_r         = 2.5e-6;   % s
@@ -23,9 +21,9 @@ f_eta_c        = 320;      % Hz , doppler centroid freq, fixed at 2V_rsin(theta_
 c      = 3e8;
 lambda = c/f0;
 theta_r_c  = deg2rad(theta_r_c);
-La = 2*res_az;
-theta_bw = 0.886*lambda/La;
-
+La = 0.886*lambda/(60*pi/180);
+res_az = La/2;
+res_rg = c/(2*F_r);
 %% Functions
 function t = dist2time(d,mode,v)
     c = 3e8/2; % lightspeed
