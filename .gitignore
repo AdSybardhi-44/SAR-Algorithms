@@ -8,3 +8,4 @@ koit.m
 koit.py
 *.json
 *dud.py
+*.npz

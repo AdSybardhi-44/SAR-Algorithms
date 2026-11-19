@@ -291,7 +291,7 @@ The official examples write `ScpiResource(ScpiTcpIpTransport, '169.254.112.162:5
 | Method | Description |
 |---|---|
 | `__init__(resource, **kwargs)` | Opens the transport (`kwargs` go to the transport) and creates the subsystem objects. Normally called for you by `SenseX1000.open_device`. |
-| `get_info() -> dict` | Same as `system.info()`. Keys used by the examples: `HWTYPE`, `HWREVISION`, `ID`, `POWER` {`CURRENT`, `VOLTAGE`, `SOURCE`}, `ROSCILLATOR` {`DCTCXO`, `ENABLED`, `HOLDOVER`, `LOCK`, `SOURCE`}, `TEMP`, `USB`. |
+| `get_info() -> dict` | Same as `system.info()`. Keys used by the examples: `HWTYPE`, `HWREVISION`, `ID`, `POWER` {`CURRENT`, `VOLTAGE`, `SOURCE`}, `ROSCILLATOR` {`DCTCXO`, `ENABLED`, `HOLDOVER`, `LOCK`, `SOURCE`}, `TEMP`, `USB`. Your X1155S-U (firmware 1.1.3) also reports `IMU` {`ACCELEROMETER` {`X`, `Y`, `Z`}}: raw counts, about 15700 counts = 1 g at rest, noise ≈ 10–20 counts. The query takes about 110 ms, during which the radar does not measure (⚠ §14). |
 | `get_state() -> dict` | `{'SENSE': sense.dump()}` — snapshot of the measurement configuration (the HDF5 examples store it as YAML next to the data). |
 | `find_devices(**kwargs)` *(classmethod)* | Discovery with the X1000 filters — see `SenseX1000.find_devices`. |
 | `execute(header, param=None, result=type(None))` | Sends any raw SCPI command. `param` is a SCPI type **instance** appended after a space (`ScpiNumber(5)`, `ScpiString('x')`, …). `result` is a SCPI type **class** used to parse the reply (leave it out for commands without a reply). Returns the parsed object (`.as_string()`, `.as_int()`, …). |
@@ -445,7 +445,7 @@ General and clock:
 | `time(time)` | `SYST:TIME h,m,s` / `…?` | `datetime.time` | Device clock time. |
 | `date(date)` | `SYST:DATE y,m,d` / `…?` | `datetime.date` | Device clock date. |
 | `timezone(posix)` | `SYST:TZONE "<tz>"` / `…?` | `str` | Local time zone in POSIX 1003.1 format, e.g. `"CET-1CEST,M3.5.0,M10.5.0/3"`. |
-| `utc(timestamp)` | `SYST:UTC <t>` / `…?` | `float` | Device clock as a UTC POSIX timestamp in seconds. The examples set it from the PC so that acquisition timestamps are meaningful: `device.system.utc(datetime.now(timezone.utc).timestamp())`. |
+| `utc(timestamp)` | `SYST:UTC <t>` / `…?` | `float` | Device clock as a UTC POSIX timestamp in seconds. The examples set it from the PC so that acquisition timestamps are meaningful: `device.system.utc(datetime.now(timezone.utc).timestamp())`. Measured on your X1155S-U: after power-up the clock reads 2000-01-01; the query returns whole seconds, but the set takes fractions: set from a high-resolution PC clock, the trigger timestamps agreed with it within about 1 ms (drift ≈ 6 ppm). |
 
 LAN — the `ipversion` argument (default `SenseX1000.IPVersion.IPV4`) selects `IP4` or `IP6` in the command path, e.g. `SYST:COMM:LAN:IP6:ADDR`:
 
@@ -607,7 +607,7 @@ Members are sent and received by **name**.
 | `F64DTMALE` | 32 | one tuple (distance, propagation time, magnitude, angle) | structured `dist`, `time`, `mag`, `angle` (float64) | — |
 | `F64DTMA2LE`, `F64DTMA3LE`, `F64DTMA4LE`, `F64DTMA5LE`, `F64DTMA6LE` | 33, 34, 35, 36, 37 | 2, 3, 4, 5, 6 such tuples per point | sub-array of that structure | — |
 
-For the complex `…RILE` types build a complex array with `a['re'] + 1j * a['im']`.
+For the complex `…RILE` types build a complex array with `a['re'] + 1j * a['im']`. The library has no command that selects the data type; your X1155S-U (firmware 1.1.3) always delivers `S16RLE` sweep-domain data (flags `SDOMAIN|DIRECTION`, subheaders timing, time axis, frequency axis and environmental info, no supplemental data).
 
 `AcqFlags(Flag)` — `header.acq_flags`:
 
@@ -986,3 +986,7 @@ Found by reading the installed source; most were also reproduced by running the 
 | 19 | `ChannelForce.ON` | Its value is the tuple `(1,)` (trailing comma in the source). | Harmless — names are sent on the wire. |
 | 20 | online API reference | No page for `scpi_control`; methods without docstrings (`calc.data`, `trigger.immediate`, `system.error_next`, `sense.refosc_internal_freq_adjust`) are not listed. | Covered in this guide. |
 | 21 | HDF5 in your `.venv` | h5py is not installed and `pip install h5py` fails on its Python 3.15. | Use a Python version with h5py wheels. |
+| 22 | Applied frequencies (X1155S-U, fw 1.1.3) | The device rounds start/stop for the sweep time in effect when they are set: 126–182 GHz is applied as 126–181.998116 GHz for a 1 ms sweep, but as 126–181.990665 GHz if the frequencies were set while a 0.5 ms sweep time was active and the time was changed to 1 ms afterwards. | Set `sweep_time` before the frequencies (as `radar_setup.py` does) and read the applied values back with `sense.dump()`. |
+| 23 | Unknown queries (X1155S-U, fw 1.1.3) | A query the firmware does not know (e.g. `SYST:INFO:IMU?`, `SYST:INFO:TEMP?`, `SYST:HELP:HEAD?`) gets no reply; the read times out, the USB-TMC abort times out too, and every later command fails. (`SYSTEM:INFO:FIRMWARE:VERSION?` works.) | Close and reopen the device. |
+| 24 | `get_info()` / `SYST:INFO?` (X1155S-U, fw 1.1.3) | Takes about 110 ms; it is the only source of the accelerometer, so every accelerometer read-out pauses the measurements (111 → 8 frames/s when read after every frame). | Do not query it during measurements (`radar_setup.py` reads it once, for the health report). |
+| 25 | `time.time()` on Windows with Python 3.12 | Advances in 15.6 ms steps (`GetSystemTimeAsFileTime`), so consecutive frames can get the same PC time stamp. | Use the radar trigger timestamps (as the recordings do), or `time.perf_counter()` for intervals. |
