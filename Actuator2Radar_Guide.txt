@@ -1,0 +1,61 @@
+## 1. Running a measurement yourself
+
+**Stage**
+1. Plug in the Arduino (COM4) and the radar, and put the stage where the scan should start (for example the far right).
+2. Start **OTA Hub** → *OTA Verification & Measurements* → **Linear Actuator**. MATLAB opens with the app, including your lead-10 changes.
+3. In the app: COM port `COM4` → **Connect**. Wait for the green **Board** lamp; that can take a few seconds or a few minutes.
+4. Press **Create stepper** (position 0 is wherever the stage stands now), then **Start** with Microstep 6400 and *Auto home* unticked.
+5. In the MATLAB Command Window, once per MATLAB session:
+   ```matlab
+   addpath('C:\Users\kryeziuarber\Desktop\SAR-Algorithms'); actuator_logger
+   ```
+   It prints the name of its log file. `actuator_logger status` shows what it's doing.
+
+**Radar**
+
+6. In a terminal in `SAR-Algorithms`, run `.venv\Scripts\python.exe radar_gui.py`. Set the parameters and traces (for example only *0 (TRx)*), keep *Real-time display*, and leave the save folder as `Results`.
+7. Press **Start**, then **Record** in the display window. The log should say "Radar clock set to the PC clock" and "Stage positions are logged to …". If it shows a warning instead, fix the logger before moving.
+
+**Scan**
+
+8. In the app, move the stage. For example, **Go to** `-495` runs a full scan from the right end. Leave a few mm of travel in the scan direction before the part you'll use (backlash), and don't press *Set home here* or *Auto home* during a recording.
+9. Press **Stop recording**. After saving, the GUI log should say "Stage positions of the recording: N readings …" with no warnings.
+10. Repeat steps 7–9 as often as you like; the logger keeps running and covers all of them.
+11. When you're finished: **Stop** in the radar GUI, `actuator_logger stop` in MATLAB (optional), then close the app.
+
+**Afterwards:** `S = trx_stage_positions('Results\acquisition_<time>.mat')` gives the stage position of every TRx sweep (`S.position_mm`) together with the samples (`S.signal`).
+
+## 2. How the actuator data is saved
+
+- **File:** `Results\actuator_<yyyyMMdd_HHmmss>.csv`. There's one file per logger session, named after the time the logger started, so a single file can cover many radar recordings.
+- **When:** each row is written to disk as it happens (within 0.1 s at most), so the file is complete even if MATLAB is closed. If you have it open in Excel, rows wait in memory until the file can be written again.
+- **Columns:**
+  - `timestamp_s`: POSIX seconds UTC from the PC clock, the moment the reading arrived.
+  - `position_mm`: the position the app shows (0 = Create stepper, negative = left); NaN on event rows.
+  - `source`:
+    - `move`: the app's own reading every ~0.25–0.3 s while moving, plus the final one.
+    - `idle`: the logger's own reading every 0.5 s while the stage stands still.
+    - `halt`: the position where STOP halted the stage.
+    - `event`: messages such as logger start/stop and stage settings.
+  - `segment`: changes when the coordinates are reset (Create stepper, Set home here, Auto home). Never mix segments.
+  - `utc`: the same time as readable text.
+  - `note`: the message text.
+- **"Warning:" rows:** a move that ended without a final reading (limit switch, timeout, aborted plan). The row names the time window where the position is uncertain.
+- **During moves** the logger sends nothing to the Arduino. It only reads the stage itself when MATLAB is idle, so it can't disturb the app.
+
+## 3. How the radar data is saved
+
+- **While recording:** raw frames are appended to `Results\acquisition_<yyyymmdd_HHMMSS>.part`, so memory use doesn't grow.
+- **On Stop recording:** the GUI writes a compressed `acquisition_<…>.mat` (or `.npz` if you chose that) and deletes the `.part`. A recording too big for one MATLAB variable (2 GiB) is saved as `.npz` automatically. If saving fails, the `.part` is kept and the log describes its layout.
+- **Contents of the file:**
+  - `radar_signal`: raw `int16` samples, sized `[samples × traces × sweeps]`.
+  - `radar_rx`: which trace is in each column (0 = TRx).
+  - `radar_timestamps`: the start of every sweep, POSIX s UTC. The radar clock is set to the PC clock at each Record, so these match the stage log within ~1–5 ms.
+  - Sweep settings, frequency and range axes, full scale, any background capture, and the radar's identity.
+- **Size:** TRx-only data is about 10 KB per sweep (about 80 MB for a 220 s scan as `.mat`); with all three traces it's about 30 KB per sweep. Each Start also writes a health report to `radar_health.json`.
+
+Because both files use the same clock, the stage position of each sweep is just `interp1(timestamp_s, position_mm, radar_timestamps)`. `trx_stage_positions` does exactly that.
+
+## 4. Am I tired?
+
+No. I'm an AI and don't get tired, so ask as much as you like. Your questions and corrections were useful, too: the warnings about which end the stage was at and the lead-screw setting directly made the tests safer and the positions correct.

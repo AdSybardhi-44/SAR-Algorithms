@@ -1,8 +1,10 @@
 # radar_setup.py
 
-"""Radar discovery, configuration and health report."""
+"""Radar discovery, configuration, clock and health report."""
 
+import ctypes
 import json
+import sys
 import time
 from datetime import datetime, timezone
 from pprint import pprint
@@ -10,6 +12,62 @@ from pprint import pprint
 from twopilabs.sense.x1000 import SenseX1000
 
 from radar_types import RadarConfig
+
+
+# FILETIME counts 100 ns intervals since 1601-01-01 UTC.
+FILETIME_UNIX_EPOCH = 116_444_736_000_000_000
+
+
+def _precise_system_time_function():
+
+    if sys.platform != "win32":
+        return None
+
+    try:
+        return ctypes.windll.kernel32.GetSystemTimePreciseAsFileTime
+    except (AttributeError, OSError):
+        return None
+
+
+_GET_SYSTEM_TIME_PRECISE = _precise_system_time_function()
+
+
+def utc_now():
+    """
+    PC clock as POSIX seconds UTC (Python float).
+
+    On Windows this is the precise system time: time.time() of Python 3.12
+    only advances every 15.6 ms there (API guide section 14, item 25), so
+    it can be up to that much behind. MATLAB's datetime('now') reads the
+    same precise clock (checked to 0.02 ms), so the radar and the stage log
+    (actuator_logger.m) share one time base.
+    """
+
+    if _GET_SYSTEM_TIME_PRECISE is None:
+        return time.time()
+
+    filetime = ctypes.c_uint64()
+    _GET_SYSTEM_TIME_PRECISE(ctypes.byref(filetime))
+
+    return (filetime.value - FILETIME_UNIX_EPOCH) / 1e7
+
+
+def sync_radar_clock(device):
+    """
+    Set the radar clock to the PC clock (UTC), so that the trigger time
+    stamps of the acquisitions are PC time. The radar accepts fractions of
+    a second: its sweep timestamps were measured 1 to 5 ms behind the PC
+    clock afterwards, drifting about 6 ppm. (SYST:UTC? returns whole
+    seconds of a counter that does not show this.) Returns the PC time
+    sent.
+    """
+
+    pc_time = utc_now()
+
+    # The library only accepts a Python float (it sends 15 digits, 10 us).
+    device.system.utc(float(pc_time))
+
+    return pc_time
 
 
 def setup_radar(
@@ -34,7 +92,8 @@ def setup_radar(
     The radar checks the values itself and raises ScpiErrorException for
     invalid ones. It rounds them (182 GHz is applied as 181.998 GHz for a
     1 ms sweep), so config holds the applied values. The radar clock is
-    set to the PC clock, so the trigger timestamps are UTC.
+    set to the PC clock (sync_radar_clock), so the trigger timestamps are
+    UTC.
 
     A health report (identity, applied configuration, PLL lock, radar
     state and system information) is written to json_filename.
@@ -67,7 +126,7 @@ def setup_radar(
 
         # The trigger timestamps come from the radar clock, which starts
         # at 2000-01-01 after power-up; set it as the 2piSENSE examples do.
-        device.system.utc(time.time())
+        sync_radar_clock(device)
 
         applied = device.sense.dump()
         traces = tuple(int(trace) for trace in device.calc.trace_list())

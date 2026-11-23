@@ -21,6 +21,9 @@ process them. Sizes are MATLAB sizes; NumPy loads the same shapes
     radar_timestamps              [1 x N_az] start of every sweep, POSIX
                                   seconds UTC from the radar clock, which is
                                   set to the PC clock when it is configured
+                                  and again when the recording starts: the
+                                  time base of the stage position log of
+                                  actuator_logger.m (see actuator_log.py)
     radar_carrier_freq            Hz, centre of the sweep
     radar_carrier_wavelength      m
     radar_bandwidth               Hz
@@ -199,6 +202,25 @@ class Recording:
             return 0.0
 
         return self._timestamps[-1] - self._timestamps[0]
+
+    @property
+    def sweep_time_range_s(self):
+        """
+        (start of the first sweep, end of the last sweep) in POSIX seconds
+        UTC, the clock of radar_timestamps; None before the first frame.
+        """
+
+        if self._first is None:
+            return None
+
+        sweep_count = self._first.samples.shape[0]
+
+        last_start = (
+            self._timestamps[-1]
+            + (sweep_count - 1) * self.config.sweep_period_s
+        )
+
+        return self._timestamps[0], last_start + self.config.sweep_time_s
 
     def add_frame(self, frame):
 

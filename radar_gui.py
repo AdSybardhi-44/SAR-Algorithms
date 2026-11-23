@@ -23,6 +23,14 @@ Recordings always hold the raw IF samples as the radar delivers them
 (int16), never the display processing. radar_acquisition.py lists the
 contents of the recording files.
 
+Stage positions (scans with the linear stage of OTA Hub): actuator_logger.m,
+run in the MATLAB of the Linear Actuator App, logs the stage position with
+PC time stamps (actuator_log.py describes the file). Every recording sets
+the radar clock to the PC clock when it starts, so radar_timestamps and the
+stage log share one time base. The log says when a recording starts
+whether the stage is being logged, and after saving which stage log covers
+the recording.
+
 The display shows absolute levels in dBFS, as in the 2piSENSE examples:
 20*log10(2*|rfft(x*w)/sum(w)| / full_scale), so a full-scale sine reads
 0 dBFS.
@@ -57,6 +65,7 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.figure import Figure
 from scipy.signal import butter, sosfiltfilt, zpk2sos
 
+from actuator_log import logger_status, recording_report
 from radar_acquisition import (
     AcquisitionCancelled,
     BackgroundAverager,
@@ -64,7 +73,7 @@ from radar_acquisition import (
     acquire_frame,
     capture_background,
 )
-from radar_setup import setup_radar
+from radar_setup import setup_radar, sync_radar_clock
 from radar_types import RadarConfig, RadarFrame
 
 
@@ -2609,6 +2618,11 @@ class RadarGui:
         return background
 
     def _start_recording(self, session, background):
+        """
+        Start a recording with the next frame. The radar clock is set to the
+        PC clock first, so that the sweep timestamps share the time base of
+        the stage position log (actuator_logger.m).
+        """
 
         settings = session.settings
         config = session.config
@@ -2626,6 +2640,8 @@ class RadarGui:
             background=background,
         )
 
+        clock_text = self._sync_radar_clock(session)
+
         # The radar delivers int16 samples.
         frame_bytes = (
             config.sweep_count * len(config.traces) * config.sweep_points * 2
@@ -2638,8 +2654,11 @@ class RadarGui:
             f"Recording to {path}\n"
             f"  {format_bytes(frame_bytes)} of raw data per frame, written "
             f"to {recording.part_path.name} until the recording is saved; "
-            f"{format_bytes(free_bytes)} free on the disk.",
+            f"{format_bytes(free_bytes)} free on the disk.\n"
+            f"  {clock_text}",
         )
+
+        self._post("log", self._stage_log_status(settings))
 
         self._post("recording_started", str(path), settings.frames_to_record)
 
@@ -2647,6 +2666,55 @@ class RadarGui:
             recording=recording,
             frames_limit=settings.frames_to_record,
         )
+
+    def _sync_radar_clock(self, session):
+        """Set the radar clock to the PC clock; returns a line for the log."""
+
+        try:
+            sync_radar_clock(session.device)
+
+        except Exception as error:
+            return (
+                f"Warning: the radar clock could not be set to the PC clock "
+                f"({type(error).__name__}: {error}); the recording uses the "
+                f"clock set at Start."
+            )
+
+        return "Radar clock set to the PC clock (UTC) for this recording."
+
+    @staticmethod
+    def _stage_log_folders(settings):
+        """Where actuator_logger.m writes: Results, or the save folder."""
+
+        return list(dict.fromkeys((settings.output_dir, DEFAULT_OUTPUT_DIR)))
+
+    def _stage_log_status(self, settings):
+
+        try:
+            return logger_status(self._stage_log_folders(settings))
+
+        except Exception as error:
+            return (
+                f"The stage position log could not be checked: "
+                f"{type(error).__name__}: {error}"
+            )
+
+    def _report_stage_positions(self, folders, span):
+        """Saver thread: which stage log covers the recording (span)."""
+
+        if span is None:
+            return
+
+        try:
+            lines = recording_report(folders, *span)
+
+        except Exception as error:
+            lines = [
+                f"The stage position log could not be checked: "
+                f"{type(error).__name__}: {error}"
+            ]
+
+        self._post("log", "\n".join(lines))
 
     def _record(self, active, frame):
         """Add a frame to the recording; True when the recording is done."""
@@ -2700,7 +2768,7 @@ class RadarGui:
 
         saver = threading.Thread(
             target=self._save_recording,
-            args=(recording,),
+            args=(recording, self._stage_log_folders(session.settings)),
             name="recording-saver",
             daemon=True,
         )
@@ -2708,8 +2776,10 @@ class RadarGui:
 
         session.savers.append(saver)
 
-    def _save_recording(self, recording):
+    def _save_recording(self, recording, stage_log_folders):
         """Saver thread; reports errors instead of raising them."""
+
+        span = recording.sweep_time_range_s
 
         try:
             path = recording.close()
@@ -2731,6 +2801,7 @@ class RadarGui:
                 recording.duration_s,
                 0,
             )
+            self._report_stage_positions(stage_log_folders, span)
             return
 
         for note in recording.notes:
@@ -2748,6 +2819,8 @@ class RadarGui:
             recording.duration_s,
             path.stat().st_size,
         )
+
+        self._report_stage_positions(stage_log_folders, span)
 
     def _run_save(self, session):
 
@@ -2807,12 +2880,17 @@ class RadarGui:
                 if len(frame_times) >= 2 and now > frame_times[0]:
                     rate_hz = (len(frame_times) - 1) / (now - frame_times[0])
 
+                # A recording started now begins with the next frame: the
+                # radar clock was set again, after this frame was taken.
+                recording_started = False
+
                 for command, value in self._take_commands():
 
                     if command == "record" and value and active is None:
 
                         try:
                             active = self._start_recording(session, background)
+                            recording_started = True
 
                         except OSError as error:
                             self._post(
@@ -2849,7 +2927,11 @@ class RadarGui:
                         )
 
                 # Saved first, then shown.
-                if active is not None and self._record(active, frame):
+                if (
+                    active is not None
+                    and not recording_started
+                    and self._record(active, frame)
+                ):
                     self._finish_recording(session, active)
                     active = None
 
