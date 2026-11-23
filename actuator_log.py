@@ -25,8 +25,9 @@ the stage position or event:
     utc           timestamp_s as text
     note          the message, or details of the row
 
-An event whose note starts with "Warning:" marks a move that ended without
-a final reading: the position is uncertain in the time it names.
+An event whose note starts with "Warning: the stage stands at" marks a move
+that ended without a final reading: the position is uncertain in the time it
+names. (Other "Warning:" events are messages of the Linear Actuator App.)
 
 The stage position at every sweep of a recording is the linear
 interpolation of the positions at radar_timestamps, e.g.
@@ -48,6 +49,9 @@ import numpy as np
 
 LOG_PATTERN = "actuator_*.csv"
 LOG_HEADER = ["timestamp_s", "position_mm", "source", "segment", "utc", "note"]
+
+# Note of the event that marks a move that ended without a final reading.
+UNCERTAIN_MOVE_NOTE = "Warning: the stage stands at"
 
 # The logger writes a position at least every 0.5 s while the stage is ready.
 ACTIVE_LOG_AGE_S = 5.0
@@ -290,7 +294,7 @@ def _cover(log, start_s, end_s):
         "high": float(np.max(log.position_mm[used])),
         "segments": sorted({int(segment) for segment in log.segment[used]}),
         "warnings": int(np.count_nonzero(
-            window & np.char.startswith(log.note, "Warning")
+            window & np.char.startswith(log.note, UNCERTAIN_MOVE_NOTE)
         )),
     }
 

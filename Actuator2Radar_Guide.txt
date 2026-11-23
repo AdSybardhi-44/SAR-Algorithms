@@ -25,6 +25,8 @@
 
 **Afterwards:** `S = trx_stage_positions('Results\acquisition_<time>.mat')` gives the stage position of every TRx sweep (`S.position_mm`) together with the samples (`S.signal`).
 
+**For the SAR script:** copy the recording as `radar_data.mat` and the stage log of the same measurement (the GUI names it after saving) as `actuator_data.csv`. `Stripmap_SAR_TDBP.m` calls `actuator_csv_to_mat("actuator_data.csv", "actuator_data.mat", radar_timestamps)`, which saves only the positions of the stage moves during the recording (`actuator_timestamps` in POSIX s UTC, `actuator_position` in m, from the last reading before the stage started moving to the reading where it stopped) and lists the moves of the log. `interp1(actuator_timestamps, actuator_position, radar_timestamps)` then gives the position of every sweep, NaN before that first reading and after the stop.
+
 ## 2. How the actuator data is saved
 
 - **File:** `Results\actuator_<yyyyMMdd_HHmmss>.csv`. There's one file per logger session, named after the time the logger started, so a single file can cover many radar recordings.
@@ -40,7 +42,7 @@
   - `segment`: changes when the coordinates are reset (Create stepper, Set home here, Auto home). Never mix segments.
   - `utc`: the same time as readable text.
   - `note`: the message text.
-- **"Warning:" rows:** a move that ended without a final reading (limit switch, timeout, aborted plan). The row names the time window where the position is uncertain.
+- **"Warning: the stage stands at …" rows:** a move that ended without a final reading (limit switch, timeout, aborted plan). The row names the time window where the position is uncertain. (Other "Warning:" rows are messages of the app.)
 - **During moves** the logger sends nothing to the Arduino. It only reads the stage itself when MATLAB is idle, so it can't disturb the app.
 
 ## 3. How the radar data is saved

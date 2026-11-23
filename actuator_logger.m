@@ -43,9 +43,10 @@ function varargout = actuator_logger(command, folder)
 %                  different segments must not be mixed.
 %     utc          timestamp_s as text
 %     note         the message of an event, or details
-%   An event row starting with "Warning:" marks a move that ended without
-%   a final reading (limit switch, timeout, abort of a plan): the position
-%   is uncertain between the two times it names.
+%   An event row starting with "Warning: the stage stands at" marks a move
+%   that ended without a final reading (limit switch, timeout, abort of a
+%   plan): the position is uncertain between the two times it names. (Other
+%   "Warning:" events are messages of the Linear Actuator App.)
 %
 %   ACCURACY  Checked with the radar on the stage: the logged positions
 %   match the motion the radar sees within about 20 ms (0.05 mm at
