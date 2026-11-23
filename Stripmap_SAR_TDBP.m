@@ -28,7 +28,6 @@ radar_mag_norm = radar_full_scale;                                          % Ra
 N_rx = radar_rx_number;                                                     % Number of radar receivers
 N_samples = radar_range_samples_number;                                     % Number of radar samples
 N_rg = floor(radar_range_samples_number/2) + 1;                             % Number of range samples
-N_az = radar_frames;                                                        % Number of azimuth samples
 
 %% Radar data
 echoScene = radar_signal;                                                   % Extracted radar echo scene [real-valued]
@@ -67,7 +66,8 @@ x_min = min(x_radar);                                                       % Mi
 % x_min = min_value_chosen;                                                       % Minimum cross-range position [m]
 
 x_coords = x_min:delta_x:x_max;                                             % Cross-range pixel positions [m]
-x_coords_idx = 1:length(x_coords);
+N_x = length(x_coords);
+x_coords_idx = 1:N_x;
 
 range_oversampling = 4;                                                     % Range oversampling factor
 delta_y = res_rg/4;                                                         % Range spacing [m]
@@ -75,14 +75,15 @@ y_max = max(swath);                                                         % Ma
 y_min = min(swath);                                                         % Minimum range position [m]
 
 y_coords = y_min:delta_y:y_max;                                             % Range pixel positions [m]
-y_coords_idx = 1:length(y_coords);
+N_y = length(y_coords);
+y_coords_idx = 1:N_y;
 
 [X, Y] = ndgrid(x_coords, y_coords);                                        % 2D grid of cross-range and range pixel positions [m]
 Pixels = X + 1j*Y;                                                          % Complex representation of pixel positions [m]
 
-radar2pixel = Pixels - radar_position;                                      % Range from radar to each pixel [m]
-range2pixel_range = abs(radar2pixel);                                       % Magnitude of range from radar to each pixel [m]
-range2pixel_angle = angle(radar2pixel);                                     % Phase of range from radar to each pixel [rad]
+radar2pixel = Pixels(:) - radar_position;                                   % Vector from radar to each pixel
+radar2pixel_range = abs(radar2pixel);                                       % Magnitude of range from radar to each pixel [m]
+radar2pixel_angle = angle(radar2pixel);                                     % Phase of range from radar to each pixel [rad]
 
 %% Post-processing
 
@@ -92,34 +93,34 @@ echoScene = echoScene(:, ...
 % Possible downsampling in the azimuth direction (to be defined later if needed)
 
 fig_unprocessed = figure(1);
-imagesc(eta, sampling_time_axis, transpose(echoScene));
+imagesc(eta, sampling_time_axis, echoScene.');
 xlabel('Slow time [s]');
 ylabel('Fast time [s]');
 title('Unprocessed Echo of the full Scene');
 
 %% Range Compression
-s_rc = ifft(echoScene, [], 1);  % Perform range compression using inverse FFT
+s_rc = ifft(echoScene, [], 1);                                              % Perform range compression using inverse FFT
 s_rc = s_rc(1:N_rg, :);                                                     % Keep only the first unique N_rg range samples
 
 fig_range_compressed_full = figure(2);
 subplot(2, 2, 1)
-imagesc(eta, range_centered, transpose(real(s_rc)));
+imagesc(eta, range_centered, real(s_rc).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Real Part');
 subplot(2, 2, 2)
-imagesc(eta, range_centered, transpose(imag(s_rc)));
+imagesc(eta, range_centered, imag(s_rc).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Imaginary Part');
 subplot(2, 2, 3)
-imagesc(eta, range_centered, transpose(20*log10(abs(s_rc)/max(abs(s_rc(:))))));
+imagesc(eta, range_centered, 20*log10(abs(s_rc)/max(abs(s_rc(:)))).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Magnitude [dB]');
-caxis([-40 0]);  % Set color axis for better visualization of magnitude in dB
+clim([-40 0]);
 subplot(2, 2, 4)
-imagesc(eta, range_centered, transpose(angle(s_rc)));
+imagesc(eta, range_centered, angle(s_rc).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Phase');
@@ -132,23 +133,23 @@ s_rc = s_rc(range_centered >= R_scene_center - swath_width/2 & ...
 
 fig_range_compressed_swath = figure(3);
 subplot(2, 2, 1)
-imagesc(eta, swath, transpose(real(s_rc)));
+imagesc(eta, swath, real(s_rc).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Real Part');
 subplot(2, 2, 2)
-imagesc(eta, swath, transpose(imag(s_rc)));
+imagesc(eta, swath, imag(s_rc).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Imaginary Part');
 subplot(2, 2, 3)
-imagesc(eta, swath, transpose(20*log10(abs(s_rc)/max(abs(s_rc(:))))));
+imagesc(eta, swath, 20*log10(abs(s_rc)/max(abs(s_rc(:)))).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Magnitude [dB]');
-caxis([-40 0]);
+clim([-40 0]);
 subplot(2, 2, 4)
-imagesc(eta, swath, transpose(angle(s_rc)));
+imagesc(eta, swath, angle(s_rc).');
 xlabel('Slow time [s]');
 ylabel('Range [m]');
 title('Phase');
@@ -156,13 +157,11 @@ sgtitle('Range Compressed Echo of the Swath');
 
 %% Backprojection Algorithm
 
-grid_mag = zeros(N_x, N_y);
+reconstructed_scene = zeros(N_x, N_y);
 for xx = x_coords_idx
     for yy = y_coords_idx
-        tg_pixel = Pixels(xx,yy);
-        rel_pixel = tg_pixel - radar_position;
-        R_pixel = abs(rel_pixel);
-        N_INTERP = (R_pixel - swath(1))/delta_R +1;
+        R_pixel = abs(Pixels(xx,yy) - radar_position);
+        N_INTERP = (R_pixel - swath(1))/delta_R + 1;
         N_SAM = n_rg;
         for nn = n_az
             INTERP_VALUES = N_INTERP(nn) - N_SAM;
@@ -170,10 +169,13 @@ for xx = x_coords_idx
             mask_interp = abs(INTERP_VALUES)<=interp_neighbors/2;
             INTERP_KERNEL = zeros(size(INTERP_VALUES));
             INTERP_WINDOW = hamming(interp_neighbors);
-            INTERP_KERNEL(mask_interp) = sinc(INTERP_VALUES(mask_interp)).*(0.54 +0.46*cos(2*pi*INTERP_VALUES(mask_interp)/interp_neighbors));
-            echoScene2Pixel = INTERP_KERNEL*(s_rc(:,nn))*exp(1j.*4.*pi.*f0.*R_pixel(nn)./c);
+            INTERP_KERNEL(mask_interp) = sinc(INTERP_VALUES(mask_interp)).* INTERP_WINDOW /interp_neighbors;
+            phi_linear = 2.*f0.*R_pixel(nn)./c;
+            phi_rvp = 0;
+            phi = phi_rvp + phi_linear;
+            echoScene2Pixel = INTERP_KERNEL*(s_rc(:,nn))*exp(1j.*2.*pi.*phi);
 
-            grid_mag(xx,yy) = grid_mag(xx,yy) + echoScene2Pixel;
+            reconstructed_scene(xx,yy) = reconstructed_scene(xx,yy) + echoScene2Pixel;
         end
     end
 end
