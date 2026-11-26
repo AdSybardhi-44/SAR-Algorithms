@@ -25,7 +25,7 @@
 
 **Afterwards:** `S = trx_stage_positions('Results\acquisition_<time>.mat')` gives the stage position of every TRx sweep (`S.position_mm`) together with the samples (`S.signal`).
 
-**For the SAR script:** copy the recording as `radar_data.mat` and the stage log of the same measurement (the GUI names it after saving) as `actuator_data.csv`. `Stripmap_SAR_TDBP.m` calls `actuator_csv_to_mat("actuator_data.csv", "actuator_data.mat", radar_timestamps)`, which saves only the positions of the stage moves during the recording (`actuator_timestamps` in POSIX s UTC, `actuator_position` in m, from the last reading before the stage started moving to the reading where it stopped) and lists the moves of the log. `interp1(actuator_timestamps, actuator_position, radar_timestamps)` then gives the position of every sweep, NaN before that first reading and after the stop.
+**For the SAR script:** copy the recording as `radar_data.mat` and the stage log of the same measurement (the GUI names it after saving) as `actuator_data.csv`. `Stripmap_SAR_TDBP.m` calls `actuator_csv_to_mat("actuator_data.csv", "actuator_data.mat", radar_timestamps)`, which saves the constant-velocity cruise portion of the scan during the recording (`actuator_timestamps` in POSIX s UTC, `actuator_position` in m, `actuator_velocity` in m/s — trimming idle endpoints, startup/shutdown ramps, and pauses; pass `ConstantVelocity=false` to keep full moves from rest to stop) and prints cruise-velocity diagnostics. `Stripmap_SAR_TDBP.m` then masks `radar_timestamps` to `[actuator_timestamps(1), actuator_timestamps(end)]` and interpolates `x_radar` with `interp1`.
 
 ## 2. How the actuator data is saved
 

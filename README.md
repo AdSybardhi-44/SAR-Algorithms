@@ -46,19 +46,21 @@ S = trx_stage_positions('Results\acquisition_20261120_165016.mat', '', 'trx_posi
 
 For `Stripmap_SAR_TDBP.m`, copy the recording as `radar_data.mat` and the stage log of the same
 measurement (the radar GUI names it after saving the recording) as `actuator_data.csv`. The script
-saves the stage positions of the moves during the recording to `actuator_data.mat`:
+saves the constant-velocity cruise portion of the stage scan during the recording to `actuator_data.mat`:
 
 ```matlab
 load('radar_data.mat')
 actuator_csv_to_mat('actuator_data.csv', 'actuator_data.mat', radar_timestamps)
 load('actuator_data.mat')
-x = interp1(actuator_timestamps, actuator_position, radar_timestamps);   % m per sweep
+mask = actuator_timestamps(1) <= radar_timestamps & radar_timestamps <= actuator_timestamps(end);
+x = interp1(actuator_timestamps, actuator_position, radar_timestamps(mask));   % m per sweep
 ```
 
-`actuator_timestamps` (POSIX s UTC) and `actuator_position` (m) run from the last reading before
-the stage started moving to the reading where it stopped, so `x` is NaN for the sweeps recorded
-before that reading and after the stop. The moves of the log are listed in the Command Window;
-without `radar_timestamps` all of them are kept.
+`actuator_timestamps` (POSIX s UTC), `actuator_position` (m) and `actuator_velocity` (m/s) cover
+the longest constant-velocity segment during the recording, trimming out pre-/post-move idle polls,
+startup acceleration, shutdown deceleration and pauses (pass `ConstantVelocity=false` to keep full
+moves from rest to stop). The moves of the log and cruise-velocity statistics are listed in the
+Command Window.
 
 Checked with the radar on the stage: the logged positions match the motion the radar sees within
 about 20 ms (0.05 mm at 2.5 mm/s). After the stage reverses its direction, the carriage lags the
